@@ -110,6 +110,39 @@ func setFieldValue(fieldValue *reflect.Value, value interface{}) error {
 	return nil
 }
 
+// 基础类型数组解析
+// []struct 类型的解析暂不支持
+func resolveArrayByReflect(dict *map[string]interface{}, prefix string, structValue *reflect.Value, tag reflect.StructTag) error {
+	values, ok := (*dict)[prefix]
+	required := tag.Get(KEY_REQUIRED)
+	if !ok {
+		if required == "true" {
+			return fmt.Errorf("未配置 %s", prefix)
+		}
+		return nil
+	}
+	reflectArr := reflect.ValueOf(values)
+	if reflectArr.Kind() != reflect.Slice {
+		if required == "true" {
+			return fmt.Errorf("配置的 %s 不是数组类型", prefix)
+		}
+		return nil
+	}
+	arrLen := reflectArr.Len()
+
+	reflectValues := make([]reflect.Value, arrLen)
+	valueType := structValue.Type().Elem()
+	for i := 0; i < arrLen; i++ {
+		item := reflectArr.Index(i).Interface()
+		itemValue := reflect.New(valueType).Elem()
+		setFieldValue(&itemValue, item)
+		reflectValues[i] = itemValue
+	}
+	result := reflect.Append(*structValue, reflectValues...)
+	structValue.Set(result)
+	return nil
+}
+
 // 通过反射解析结构体
 func resolveStructByReflect(dict *map[string]interface{}, prefix string, structType reflect.Type, structValue *reflect.Value) error {
 	count := structType.NumField()
@@ -131,8 +164,8 @@ func resolveStructByReflect(dict *map[string]interface{}, prefix string, structT
 		case reflect.Struct:
 			resolveStructByReflect(dict, key, field.Type, &fieldValue)
 			continue
-		case reflect.Array:
-			// TODO 数组解析
+		case reflect.Slice:
+			resolveArrayByReflect(dict, key, &fieldValue, field.Tag)
 			continue
 		}
 		value, ok := (*dict)[key]
