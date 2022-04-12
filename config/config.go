@@ -1,18 +1,24 @@
 package config
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/tidwall/gjson"
+)
 
 type Adapter interface {
 	Load(name string) (Configer, error)
 }
 
 type Configer interface {
-	Get(key string) (interface{}, bool)
-	Resolve(prefix string, p interface{}) error
+	GetJson() string
 }
 
 var adapters = make(map[string]Adapter)
+
 var instance Configer
+var resource gjson.Result
 
 func Register(name string, adapter Adapter) {
 	_, ok := adapters[name]
@@ -36,14 +42,23 @@ func InitInstance(name string, filename string) error {
 		return err
 	} else {
 		instance = newInstance
+		resource = gjson.Parse(instance.GetJson())
 		return nil
 	}
 }
 
 func Get(key string) (interface{}, bool) {
-	return instance.Get(key)
+	result := resource.Get(key)
+	if result.Exists() {
+		return result.Value(), true
+	}
+	return nil, false
 }
 
 func Resolve(prefix string, p interface{}) error {
-	return instance.Resolve(prefix, p)
+	result := resource.Get(prefix)
+	if !result.Exists() {
+		return fmt.Errorf("not found value by [%s]", prefix)
+	}
+	return json.Unmarshal([]byte(result.String()), p)
 }
