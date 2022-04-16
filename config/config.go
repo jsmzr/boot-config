@@ -16,6 +16,7 @@ type Configer interface {
 }
 
 var adapters = make(map[string]Adapter)
+var cache = make(map[string]*gjson.Result)
 
 var instance Configer
 var resource gjson.Result
@@ -47,18 +48,30 @@ func InitInstance(name string, filename string) error {
 	}
 }
 
-func Get(key string) (interface{}, bool) {
-	result := resource.Get(key)
-	if result.Exists() {
-		return result.Value(), true
+// 获取配置值，可按照需要的类型进行安全的转换
+// 如: value.Int()
+func Get(key string) (*gjson.Result, bool) {
+	if res := cache[key]; res != nil {
+		return res, false
+	}
+	value := resource.Get(key)
+	if value.Exists() {
+		cache[key] = &value
+		return &value, true
 	}
 	return nil, false
 }
 
+// 将配置解析为结构体
 func Resolve(prefix string, p interface{}) error {
-	result := resource.Get(prefix)
-	if !result.Exists() {
-		return fmt.Errorf("not found value by [%s]", prefix)
+	res := cache[prefix]
+	if res == nil {
+		tmp := resource.Get(prefix)
+		if !tmp.Exists() {
+			return fmt.Errorf("not found value by [%s]", prefix)
+		}
+		res = &tmp
+		cache[prefix] = res
 	}
-	return json.Unmarshal([]byte(result.String()), p)
+	return json.Unmarshal([]byte(res.String()), p)
 }
