@@ -52,7 +52,7 @@ func InitInstance(name string, filename string) error {
 // 如: value.Int()
 func Get(key string) (*gjson.Result, bool) {
 	if res := cache[key]; res != nil {
-		return res, false
+		return res, true
 	}
 	value := resource.Get(key)
 	if value.Exists() {
@@ -64,6 +64,9 @@ func Get(key string) (*gjson.Result, bool) {
 
 // 将配置解析为结构体
 func Resolve(prefix string, p interface{}) error {
+	if prefix == "" {
+		return json.Unmarshal([]byte(resource.String()), p)
+	}
 	res := cache[prefix]
 	if res == nil {
 		tmp := resource.Get(prefix)
