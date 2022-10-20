@@ -36,9 +36,8 @@ func InitInstance(name string, filename string) error {
 	}
 
 	if instance != nil {
-		fmt.Printf("[Bootstrap-Config]  Instance [%s] will be replaced. \n", name)
+		fmt.Printf("Instance already init, will be [%s] replaced. \n", name)
 	}
-	fmt.Printf("[Bootstrap-Config]  Init [%s] adapter. \n", filename)
 	if newInstance, err := adapter.Load(filename); err != nil {
 		return err
 	} else {
