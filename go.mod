@@ -1,4 +1,4 @@
-module github.com/jsmzr/bootstrap-config
+module github.com/jsmzr/boots-config
 
 go 1.17
 
