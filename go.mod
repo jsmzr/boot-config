@@ -1,4 +1,4 @@
-module github.com/jsmzr/boots-config
+module github.com/jsmzr/boot-config
 
 go 1.17
 
